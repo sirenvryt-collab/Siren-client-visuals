@@ -1,0 +1,6 @@
+-proc:none
+-d
+/tmp/jout
+-XDshould-stop.at=PARSE
+-XDshould-stop.ifError=PARSE
+@/tmp/claude-0/srcs.txt

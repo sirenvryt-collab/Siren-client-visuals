@@ -22,6 +22,8 @@ import java.util.regex.Pattern;
 public class MusicBridge {
     public record Line(double t, String s) { }
     public static final int PORT = 8765;
+    /** Token baked into the original userscript, so scripts you already installed keep working. */
+    static final String LEGACY_TOKEN = "36a795c46374b9531a6d9d18256524b0";
     public static volatile String id = "", title = "", artist = "", source = "";
     public static volatile double duration, position;
     public static volatile boolean playing, ad;
@@ -116,7 +118,7 @@ public class MusicBridge {
         if (req.startsWith("GET /sirens.user.js")) { respond(s, 200, "text/javascript", script()); return; }
         if (req.startsWith("GET")) { respond(s, 200, "text/plain", "Sirens Visuals bridge is running. Install the userscript from /sirens.user.js"); return; }
         byte[] body = len > 0 ? in.readNBytes(Math.min(len, 1 << 20)) : new byte[0];
-        if (!Mods.MUSIC.on() || tok == null || !tok.equals(token())) { respond(s, 403, "application/json", "{}"); return; }
+        if (!Mods.MUSIC.on() || tok == null || !(tok.equals(token()) || tok.equals(LEGACY_TOKEN))) { respond(s, 403, "application/json", "{}"); return; }
         try { update(new String(body, StandardCharsets.UTF_8)); } catch (Exception ignored) { }
         JsonObject r = new JsonObject();
         r.addProperty("muteAds", Mods.MU_MUTE.on());

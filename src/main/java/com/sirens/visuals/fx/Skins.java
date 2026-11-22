@@ -10,7 +10,7 @@ import com.sirens.visuals.cfg.Config;
 import com.sirens.visuals.cfg.Mods;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.resources.Identifier;
 
 import javax.imageio.ImageIO;

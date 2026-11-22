@@ -199,6 +199,7 @@ public final class Mods {
     public static final Choice S_PHASE = SKY.choice("phase", "Moon Phase", 0, "Keep Current", "Full Moon", "Waning Gibbous", "Third Quarter", "Waning Crescent", "New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous").showIf(() -> S_MODE.idx == 1);
     public static final Num S_SPEED = SKY.num("speed", "Day Speed", 1f, 0f, 30f, 0.25f).suffix("x").showIf(() -> S_MODE.idx == 2);
     public static final Setting.Header S_H1 = SKY.header("Sun & moon");
+    public static final Setting.Info S_NOTE = SKY.info(() -> "Sun/moon size and a sky image need a sky-renderer hook that is not in this build yet.");
     public static final Num S_SUN = SKY.num("sun", "Sun Size", 1f, 0.4f, 4f, 0.05f).suffix("x");
     public static final Num S_MOON = SKY.num("moon", "Moon Size", 1f, 0.4f, 4f, 0.05f).suffix("x");
     public static final Setting.Header S_H2 = SKY.header("Stars");
@@ -221,6 +222,8 @@ public final class Mods {
     //  PLAYER
     // =====================================================================================================
     public static final Module SKIN = new Module("skin", "Skin Changer", Category.PLAYER, "Wear any skin client-side: from a file, a username or a URL.", true, false).kw("texture model slim");
+    public static final Setting.Action SK_BROWSE = SKIN.action("browse", "Choose Skin Image...", () -> Actions.browseSkin());
+    public static final Setting.Info SK_DROP = SKIN.info(() -> "Tip: you can also drag a .png onto this screen. " + com.sirens.visuals.fx.Skins.status);
     public static final Choice SK_SRC = SKIN.choice("source", "Source", 1, "File", "Username", "URL");
     public static final Choice SK_FILE = SKIN.choice("file", "Skin File", 0, "(none)").showIf(() -> SK_SRC.idx == 0);
     public static final Text SK_NAME = SKIN.text("name", "Username", "").hint("Minecraft username").showIf(() -> SK_SRC.idx == 1);
@@ -230,6 +233,8 @@ public final class Mods {
     public static final Setting.Action SK_FOLDER = SKIN.action("folder", "Copy Skins Folder Path", () -> Actions.copySkinFolder());
 
     public static final Module CAPE = new Module("cape", "Custom Cape", Category.PLAYER, "Wear a cape (and matching elytra) of your own design or file.", true, false);
+    public static final Setting.Action C_BROWSE = CAPE.action("browse", "Choose Cape Image...", () -> Actions.browseCape());
+    public static final Setting.Info C_DROP = CAPE.info(() -> "Tip: drag a .png onto this screen, or use a pattern. " + com.sirens.visuals.fx.Skins.status);
     public static final Choice C_SRC = CAPE.choice("source", "Source", 0, "Pattern", "File", "Username's Cape", "URL");
     public static final Choice C_PAT = CAPE.choice("pattern", "Pattern", 6, "Solid", "Vertical Stripes", "Horizontal Stripes", "Gradient", "Diagonal", "Checker", "Galaxy", "Flames", "Waves").showIf(() -> C_SRC.idx == 0);
     public static final Color C_C1 = CAPE.color("c1", "Color 1", 0x6A2CFF).showIf(() -> C_SRC.idx == 0);
@@ -241,14 +246,14 @@ public final class Mods {
     public static final Setting.Action C_APPLY = CAPE.action("apply", "Apply Cape", () -> Actions.applyCape());
     public static final Setting.Action C_FOLDER = CAPE.action("folder", "Copy Capes Folder Path", () -> Actions.copyCapeFolder());
 
-    public static final Module COSM = new Module("cosmetics", "Cosmetics", Category.PLAYER, "Particle cosmetics: halo, wings, aura, orbit, crown and trails.", true, false).kw("halo wings aura");
+    public static final Module COSM = new Module("cosmetics", "Cosmetics", Category.PLAYER, "Particle cosmetics: halo, wings, aura, orbit, crown and trails.", true, true).kw("halo wings aura");
     public static final Choice CO_TYPE = COSM.choice("type", "Cosmetic", 1, "None", "Halo", "Wings", "Aura", "Orbit", "Crown", "Trail", "Cape Sparkle");
     public static final Color CO_C1 = COSM.color("c1", "Color", 0xFFD84A);
     public static final Color CO_C2 = COSM.color("c2", "Second Color", 0xFF5CE1);
     public static final Bool CO_RAINBOW = COSM.bool("rainbow", "Rainbow", false);
     public static final Num CO_SIZE = COSM.num("size", "Size", 1f, 0.5f, 2.5f, 0.05f).suffix("x");
     public static final Num CO_DENS = COSM.num("density", "Density", 1f, 0.3f, 3f, 0.1f).suffix("x");
-    public static final Bool CO_FIRST = COSM.bool("first", "Show in First Person", false);
+    public static final Bool CO_FIRST = COSM.bool("first", "Show in First Person", true);
 
     public static final Module HANDS = new Module("hands", "Hand Position", Category.PLAYER, "Move, rotate and scale your first-person hands and held items.", true, false).kw("viewmodel item offset");
     public static final Choice H_WHICH = HANDS.choice("which", "Apply To", 0, "Both Hands", "Main Hand", "Off Hand");
@@ -307,4 +312,5 @@ public final class Mods {
     public static final Setting.Info MU_STATUS = MUSIC.info(() -> com.sirens.visuals.MusicBridge.status());
     public static final Setting.Action MU_COPY = MUSIC.action("copyurl", "Copy Userscript Install URL", () -> Actions.copyScriptUrl());
     public static final Setting.Info MU_HELP = MUSIC.info(() -> "Paste the URL into your browser with Tampermonkey installed, then open music.youtube.com.");
+    static { S_H1.hide(); S_SUN.hide(); S_MOON.hide(); S_SET.hide(); S_SETC.hide(); }
 }

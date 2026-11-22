@@ -166,4 +166,8 @@ public class MenuScreen extends Screen {
     }
 
     @Override public void onClose() { Config.save(); super.onClose(); }
+
+    public void onFilesDrop(java.util.List<java.nio.file.Path> paths) {
+        com.sirens.visuals.Actions.dropped(paths, sel == com.sirens.visuals.cfg.Mods.CAPE ? 2 : 1);
+    }
 }

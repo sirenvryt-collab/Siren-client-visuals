@@ -38,6 +38,13 @@ public final class Hooks {
         reg("moon", "Moon size", "Custom Sky enabled");
     }
 
+    public static final Map<String, String> ERRORS = new ConcurrentHashMap<>();
+
+    public static void error(String where, Throwable t) {
+        String m = t.getClass().getSimpleName() + ": " + t.getMessage();
+        if (ERRORS.put(where, m) == null) { System.err.println("[Sirens Visuals] error in " + where); t.printStackTrace(); }
+    }
+
     public static void hit(String id) {
         HITS.computeIfAbsent(id, k -> new AtomicLong()).incrementAndGet();
     }

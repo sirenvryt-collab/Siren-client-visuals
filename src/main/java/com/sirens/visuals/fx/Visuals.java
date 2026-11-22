@@ -101,6 +101,17 @@ public final class Visuals {
     }
 
     public static void tick(Minecraft mc) {
+        try { tickMain(mc); } catch (Throwable t) { com.sirens.visuals.Hooks.error("tick", t); runLate(mc); }
+    }
+
+    /** Still run the cosmetics/emotes if the main tick threw. */
+    private static void runLate(Minecraft mc) {
+        if (mc.level == null || mc.player == null) return;
+        try { Cosmetics.tick(mc, mc.level, mc.player, tickN); } catch (Throwable t) { com.sirens.visuals.Hooks.error("cosmetics", t); }
+        try { Emotes.tick(mc.level, mc.player); } catch (Throwable t) { com.sirens.visuals.Hooks.error("emotes", t); }
+    }
+
+    private static void tickMain(Minecraft mc) {
         tickN++;
         ClientLevel lv = mc.level;
         LocalPlayer p = mc.player;
@@ -193,8 +204,8 @@ public final class Visuals {
 
         if (Mods.NOWEATHER.on()) { lv.setRainLevel(0f); lv.setThunderLevel(0f); }
 
-        Cosmetics.tick(mc, lv, p, tickN);
-        Emotes.tick(lv, p);
+        try { Cosmetics.tick(mc, lv, p, tickN); } catch (Throwable t) { com.sirens.visuals.Hooks.error("cosmetics", t); }
+        try { Emotes.tick(lv, p); } catch (Throwable t) { com.sirens.visuals.Hooks.error("emotes", t); }
     }
 
     private static double footDist;

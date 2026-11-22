@@ -51,4 +51,10 @@ public class PanelScreen extends Screen {
     }
     @Override public boolean charTyped(CharacterEvent e) { for (SettingsPanel p : panels) if (p.chr(e.codepoint())) return true; return false; }
     @Override public void removed() { Config.save(); }
+
+    public void onFilesDrop(java.util.List<java.nio.file.Path> paths) {
+        com.sirens.visuals.Actions.dropped(paths, lastX > width / 2 && mods.length > 1 ? 2 : 1);
+    }
+    private double lastX;
+    public void mouseMoved(double x, double y) { lastX = x; }
 }

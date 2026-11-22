@@ -86,10 +86,12 @@ public final class Skins {
     // ------------------------------------------------------------ sources
     record Profile(String skinUrl, boolean slim, String capeUrl) { }
 
+    static <T> T need(T v) { if (v == null) throw new IllegalStateException("download failed - check the username/URL"); return v; }
+
     static Profile profile(String name) throws Exception {
-        JsonObject o = JsonParser.parseString(Net.text("https://api.mojang.com/users/profiles/minecraft/" + Net.enc(name))).getAsJsonObject();
+        JsonObject o = JsonParser.parseString(need(Net.text("https://api.mojang.com/users/profiles/minecraft/" + Net.enc(name)))).getAsJsonObject();
         String id = o.get("id").getAsString();
-        JsonObject pr = JsonParser.parseString(Net.text("https://sessionserver.mojang.com/session/minecraft/profile/" + id)).getAsJsonObject();
+        JsonObject pr = JsonParser.parseString(need(Net.text("https://sessionserver.mojang.com/session/minecraft/profile/" + id))).getAsJsonObject();
         JsonArray props = pr.getAsJsonArray("properties");
         for (int i = 0; i < props.size(); i++) {
             JsonObject p = props.get(i).getAsJsonObject();
@@ -103,6 +105,32 @@ public final class Skins {
         throw new IllegalStateException("no textures");
     }
 
+    private static Path copyIn(Path src, Path dir) throws Exception {
+        Path dst = dir.resolve(src.getFileName().toString());
+        if (!src.toAbsolutePath().normalize().equals(dst.toAbsolutePath().normalize())) Files.copy(src, dst, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return dst;
+    }
+
+    public static void useSkinFile(Path src) {
+        try {
+            Path d = copyIn(src, skinsDir()); scan();
+            Mods.SK_SRC.set(0);
+            String[] o = Mods.SK_FILE.opts;
+            for (int i = 0; i < o.length; i++) if (o[i].equals(d.getFileName().toString())) Mods.SK_FILE.set(i);
+            applySkin();
+        } catch (Exception e) { status = "Could not use file: " + e; }
+    }
+
+    public static void useCapeFile(Path src) {
+        try {
+            Path d = copyIn(src, capesDir()); scan();
+            Mods.C_SRC.set(1);
+            String[] o = Mods.C_FILE.opts;
+            for (int i = 0; i < o.length; i++) if (o[i].equals(d.getFileName().toString())) Mods.C_FILE.set(i);
+            applyCape();
+        } catch (Exception e) { status = "Could not use file: " + e; }
+    }
+
     public static void applySkin() {
         status = "Loading skin...";
         Thread t = new Thread(() -> {
@@ -110,8 +138,8 @@ public final class Skins {
                 byte[] png; Boolean sl = null;
                 switch (Mods.SK_SRC.idx()) {
                     case 0 -> png = Files.readAllBytes(skinsDir().resolve(Mods.SK_FILE.value()));
-                    case 1 -> { Profile p = profile(Mods.SK_NAME.get().trim()); if (p.skinUrl() == null) throw new IllegalStateException("player has no skin"); png = Net.bytes(p.skinUrl()); sl = p.slim(); }
-                    default -> png = Net.bytes(Mods.SK_URL.get().trim());
+                    case 1 -> { Profile p = profile(Mods.SK_NAME.get().trim()); if (p.skinUrl() == null) throw new IllegalStateException("player has no skin"); png = need(Net.bytes(p.skinUrl())); sl = p.slim(); }
+                    default -> png = need(Net.bytes(Mods.SK_URL.get().trim()));
                 }
                 png = fixSkin(png);
                 byte[] fin = png; Boolean fsl = sl;
@@ -155,8 +183,8 @@ public final class Skins {
                 switch (Mods.C_SRC.idx()) {
                     case 0 -> png = Capes.generate(Mods.C_PAT.idx(), Mods.C_C1.rgb(), Mods.C_C2.rgb());
                     case 1 -> png = Files.readAllBytes(capesDir().resolve(Mods.C_FILE.value()));
-                    case 2 -> { Profile p = profile(Mods.C_NAME.get().trim()); if (p.capeUrl() == null) throw new IllegalStateException("player has no cape"); png = Net.bytes(p.capeUrl()); }
-                    default -> png = Net.bytes(Mods.C_URL.get().trim());
+                    case 2 -> { Profile p = profile(Mods.C_NAME.get().trim()); if (p.capeUrl() == null) throw new IllegalStateException("player has no cape"); png = need(Net.bytes(p.capeUrl())); }
+                    default -> png = need(Net.bytes(Mods.C_URL.get().trim()));
                 }
                 byte[] fin = png;
                 Minecraft.getInstance().execute(() -> {
@@ -169,6 +197,7 @@ public final class Skins {
     }
 
     // ------------------------------------------------------------ mixin entry point
+    // Reflection must not rely on member names: at runtime they are obfuscated. We go by position/type instead.
     public static PlayerSkin modify(PlayerSkin base) {
         try {
             boolean s = Mods.SKIN.on() && skinId != null, c = Mods.CAPE.on() && capeId != null;
@@ -177,38 +206,66 @@ public final class Skins {
             RecordComponent[] rc = PlayerSkin.class.getRecordComponents();
             Object[] args = new Object[rc.length];
             Class<?>[] types = new Class<?>[rc.length];
+            int slot = 0;
             for (int i = 0; i < rc.length; i++) {
-                types[i] = rc[i].getType();
+                Class<?> t = rc[i].getType();
+                types[i] = t;
+                rc[i].getAccessor().setAccessible(true);
                 Object v = rc[i].getAccessor().invoke(base);
-                String n = rc[i].getName().toLowerCase();
-                if (s && (n.equals("texture") || n.equals("body"))) v = make(rc[i].getType(), skinId, v);
-                else if (c && n.equals("cape")) v = make(rc[i].getType(), capeId, v);
-                else if (c && n.equals("elytra") && Mods.C_ELYTRA.on()) v = make(rc[i].getType(), capeId, v);
-                else if (s && n.equals("model") && slim != null) v = model(rc[i].getType(), slim, v);
+                if (t.isEnum()) { if (s && slim != null) v = model(t, slim, v); }
+                else if (t != boolean.class) {
+                    int k = slot++;
+                    if (k == 0 && s) v = make(t, skinId, v);
+                    else if (k == 1 && c) v = make(t, capeId, v);
+                    else if (k == 2 && c && Mods.C_ELYTRA.on()) v = make(t, capeId, v);
+                }
                 args[i] = v;
             }
             Constructor<PlayerSkin> k = PlayerSkin.class.getDeclaredConstructor(types);
             k.setAccessible(true);
             return k.newInstance(args);
         } catch (Throwable t) {
+            Hooks.error("skin override", t);
+            status = "Skin override failed: " + t;
             return base;
         }
     }
 
     private static Object make(Class<?> type, Identifier id, Object old) throws Exception {
         if (type == Identifier.class) return id;
-        for (Constructor<?> c : type.getDeclaredConstructors()) {
-            Class<?>[] p = c.getParameterTypes();
-            c.setAccessible(true);
-            if (p.length == 1 && p[0] == Identifier.class) return c.newInstance(id);
-            if (p.length == 2 && p[0] == Identifier.class && p[1] == Identifier.class) return c.newInstance(id, id);
+        java.util.List<Class<?>> cands = new ArrayList<>();
+        if (old != null) cands.add(old.getClass());
+        if (type.getEnclosingClass() != null) cands.addAll(java.util.Arrays.asList(type.getEnclosingClass().getDeclaredClasses()));
+        cands.addAll(java.util.Arrays.asList(type.getDeclaredClasses()));
+        cands.add(type);
+        for (Class<?> k : cands) {
+            if (!type.isAssignableFrom(k) || k.isInterface() || java.lang.reflect.Modifier.isAbstract(k.getModifiers())) continue;
+            for (Constructor<?> c : k.getDeclaredConstructors()) {
+                Class<?>[] p = c.getParameterTypes();
+                c.setAccessible(true);
+                if (p.length == 2 && p[0] == Identifier.class && p[1] == Identifier.class) return c.newInstance(id, id);
+            }
+            for (Constructor<?> c : k.getDeclaredConstructors()) {
+                Class<?>[] p = c.getParameterTypes();
+                if (p.length == 1 && p[0] == Identifier.class) { c.setAccessible(true); return c.newInstance(id); }
+            }
         }
-        return old;
+        throw new IllegalStateException("no texture class for " + type.getName());
     }
 
     private static Object model(Class<?> type, boolean slim, Object old) {
-        if (!type.isEnum()) return old;
-        for (Object o : type.getEnumConstants()) if (o.toString().toUpperCase().contains(slim ? "SLIM" : "WIDE")) return o;
+        try {
+            for (Object o : type.getEnumConstants()) {
+                java.util.List<String> names = new ArrayList<>();
+                names.add(o.toString()); names.add(((Enum<?>) o).name());
+                for (var m : type.getMethods())
+                    if (m.getParameterCount() == 0 && m.getReturnType() == String.class) { try { names.add(String.valueOf(m.invoke(o))); } catch (Throwable ignored) { } }
+                for (String n : names) {
+                    String l = n.toLowerCase();
+                    if (slim ? l.equals("slim") : (l.equals("default") || l.equals("wide"))) return o;
+                }
+            }
+        } catch (Throwable ignored) { }
         return old;
     }
 }

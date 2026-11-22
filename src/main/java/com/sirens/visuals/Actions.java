@@ -27,6 +27,18 @@ public final class Actions {
     public static void copyCapeFolder() { copy(Skins.capesDir().toAbsolutePath().toString()); }
     public static void copyScriptUrl() { copy(MusicBridge.scriptUrl()); }
 
+    public static void browseSkin() { FilePicker.pick("Choose a skin image (.png)", Skins::useSkinFile); }
+    public static void browseCape() { FilePicker.pick("Choose a cape image (.png)", Skins::useCapeFile); }
+
+    /** Files dropped on a screen. kind: 0 = by module, 1 = skin, 2 = cape. */
+    public static void dropped(java.util.List<java.nio.file.Path> paths, int kind) {
+        for (java.nio.file.Path p : paths) {
+            if (!p.toString().toLowerCase().endsWith(".png")) continue;
+            if (kind == 2) Skins.useCapeFile(p); else Skins.useSkinFile(p);
+            return;
+        }
+    }
+
     private static void copy(String s) {
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> mc.keyboardHandler.setClipboard(s));
